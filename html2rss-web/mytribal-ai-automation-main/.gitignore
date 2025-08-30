@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+
+# macOS
+.DS_Store
+
+# Credentials and sensitive data
+*.key
+*.secret
+config.py
+credentials.py
+
+# IDE/project files
+.idea/
+*.vscode/
+
+# AWS Lambda specific
+*.zip
+.serverless/

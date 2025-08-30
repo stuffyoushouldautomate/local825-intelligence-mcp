@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local 825 Intelligence Dashboard</title>
+    <style>
+        /* Local 825 Dashboard Widget Styles */
+        .local825-widget {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .widget-header {
+            background: linear-gradient(90deg, #d4af37 0%, #f4d03f 100%);
+            color: #1e3c72;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .widget-header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .widget-header .date {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        .widget-header .logo {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 32px;
+        }
+
+        .widget-content {
+            padding: 0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .stat-number {
+            font-size: 28px;
+            font-weight: 700;
+            color: #f4d03f;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .jurisdiction-breakdown {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .jurisdiction-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #f4d03f;
+        }
+
+        .jurisdiction-bars {
+            display: flex;
+            gap: 10px;
+            align-items: end;
+            height: 120px;
+        }
+
+        .jurisdiction-bar {
+            flex: 1;
+            background: linear-gradient(to top, #f4d03f, #d4af37);
+            border-radius: 4px 4px 0 0;
+            position: relative;
+            min-width: 60px;
+        }
+
+        .jurisdiction-bar.nj { height: 100%; }
+        .jurisdiction-bar.ny { height: 43%; }
+        .jurisdiction-bar.local825 { height: 0.5%; }
+
+        .jurisdiction-label {
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .jurisdiction-percentage {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            font-weight: 600;
+            color: #f4d03f;
+        }
+
+        .top-articles {
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #f4d03f;
+            border-bottom: 2px solid rgba(244, 208, 63, 0.3);
+            padding-bottom: 5px;
+        }
+
+        .article-card {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #f4d03f;
+            transition: all 0.2s ease;
+        }
+
+        .article-card:hover {
+            background: rgba(255, 255, 255, 0.12);
+            transform: translateX(5px);
+        }
+
+        .article-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .article-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            opacity: 0.7;
+            margin-bottom: 8px;
+        }
+
+        .article-source {
+            background: rgba(244, 208, 63, 0.2);
+            color: #f4d03f;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        .article-score {
+            background: rgba(46, 204, 113, 0.2);
+            color: #2ecc71;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        .article-category {
+            background: rgba(52, 152, 219, 0.2);
+            color: #3498db;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            text-transform: uppercase;
+        }
+
+        .company-tracking {
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .company-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .company-card {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.2s ease;
+        }
+
+        .company-card:hover {
+            background: rgba(255, 255, 255, 0.12);
+            transform: translateY(-2px);
+        }
+
+        .company-name {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #f4d03f;
+        }
+
+        .company-status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 500;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .status-signatory { background: rgba(46, 204, 113, 0.2); color: #2ecc71; }
+        .status-nonunion { background: rgba(231, 76, 60, 0.2); color: #e74c3c; }
+        .status-organizing { background: rgba(243, 156, 18, 0.2); color: #f39c12; }
+
+        .company-updates {
+            font-size: 11px;
+            opacity: 0.8;
+            line-height: 1.4;
+        }
+
+        .widget-footer {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px 20px;
+            text-align: center;
+            font-size: 11px;
+            opacity: 0.7;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(90deg, #f4d03f, #d4af37);
+            color: #1e3c72;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 15px;
+        }
+
+        .refresh-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(244, 208, 63, 0.3);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 14px;
+            opacity: 0.7;
+        }
+
+        .spinner {
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid #f4d03f;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .jurisdiction-bars {
+                flex-direction: column;
+                height: auto;
+                align-items: center;
+            }
+            
+            .jurisdiction-bar {
+                width: 60px;
+                height: 80px !important;
+            }
+            
+            .company-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* WordPress Admin Integration */
+        .wp-admin .local825-widget {
+            margin: 20px 0;
+            max-width: 100%;
+        }
+
+        .wp-admin .widget-content {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="local825-widget">
+        <div class="widget-header">
+            <h1>Local 825 Intelligence Dashboard</h1>
+            <div class="date">August 28, 2025 - Daily Intelligence Report</div>
+            <div class="logo">🏗️</div>
+        </div>
+
+        <div class="widget-content">
+            <!-- Key Statistics -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">3,243</div>
+                    <div class="stat-label">Relevant Articles</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">2,193</div>
+                    <div class="stat-label">New Jersey Focus</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">948</div>
+                    <div class="stat-label">New York Focus</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">1</div>
+                    <div class="stat-label">Local 825 Specific</div>
+                </div>
+            </div>
+
+            <!-- Jurisdiction Breakdown -->
+            <div class="jurisdiction-breakdown">
+                <div class="jurisdiction-title">Jurisdiction Coverage</div>
+                <div class="jurisdiction-bars">
+                    <div class="jurisdiction-bar nj">
+                        <div class="jurisdiction-percentage">67.6%</div>
+                        <div class="jurisdiction-label">New Jersey<br>2,193 articles</div>
+                    </div>
+                    <div class="jurisdiction-bar ny">
+                        <div class="jurisdiction-percentage">29.2%</div>
+                        <div class="jurisdiction-label">New York<br>948 articles</div>
+                    </div>
+                    <div class="jurisdiction-bar local825">
+                        <div class="jurisdiction-percentage">0.03%</div>
+                        <div class="jurisdiction-label">Local 825<br>1 article</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Articles -->
+            <div class="top-articles">
+                <div class="section-title">🔝 Top Intelligence Stories</div>
+                
+                <div class="article-card">
+                    <div class="article-title">Union boss vows CFMEU 'here to stay' amid nationwide construction strike</div>
+                    <div class="article-meta">
+                        <span class="article-source">9News</span>
+                        <span class="article-score">Score: 12</span>
+                        <span class="article-category">Labor Disputes</span>
+                    </div>
+                    <div class="article-meta">
+                        <span>Published: Aug 27, 2024</span>
+                        <span>Jurisdiction: New Jersey</span>
+                    </div>
+                </div>
+
+                <div class="article-card">
+                    <div class="article-title">BEAD prevailing wage confusion in Pennsylvania puts wireless infrastructure contractors at risk</div>
+                    <div class="article-meta">
+                        <span class="article-source">Wireless Estimator</span>
+                        <span class="article-score">Score: 11</span>
+                        <span class="article-category">Contract Negotiations</span>
+                    </div>
+                    <div class="article-meta">
+                        <span>Published: Apr 3, 2025</span>
+                        <span>Jurisdiction: New Jersey</span>
+                    </div>
+                </div>
+
+                <div class="article-card">
+                    <div class="article-title">The Daily Dirt: Construction workers push to expand prevailing wage mandates</div>
+                    <div class="article-meta">
+                        <span class="article-source">The Real Deal</span>
+                        <span class="article-score">Score: 11</span>
+                        <span class="article-category">Construction Projects</span>
+                    </div>
+                    <div class="article-meta">
+                        <span>Published: Mar 13, 2025</span>
+                        <span>Jurisdiction: New Jersey</span>
+                    </div>
+                </div>
+
+                <div class="article-card">
+                    <div class="article-title">After Backing Murphy Twice, Operating Engineers Endorse Ciattarelli Over Sherrill</div>
+                    <div class="article-meta">
+                        <span class="article-source">Save Jersey</span>
+                        <span class="article-score">Score: 5</span>
+                        <span class="article-category">Local 825 Specific</span>
+                    </div>
+                    <div class="article-meta">
+                        <span>Published: Jun 19, 2025</span>
+                        <span>Jurisdiction: Local 825 Specific</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Company Tracking Analysis -->
+            <div class="company-tracking">
+                <div class="section-title">🏢 Company Intelligence Tracking</div>
+                <div class="company-grid">
+                    <div class="company-card">
+                        <div class="company-name">Skanska USA</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Major infrastructure projects in NJ/NY region. 
+                            Prevailing wage compliance on Hudson Tunnel project. 
+                            Union workforce expansion in NYC metro area.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">Tutor Perini Corporation</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Active on NJ Turnpike expansion. 
+                            Union labor utilization at 85%. 
+                            Safety record improvement initiatives.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">Kiewit Infrastructure</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Gateway Program participation. 
+                            Heavy equipment operator training programs. 
+                            Prevailing wage compliance on all NJ projects.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">Walsh Construction</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> NJ Transit infrastructure projects. 
+                            Union workforce development. 
+                            Safety performance awards.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">Granite Construction</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Highway and bridge projects in NJ. 
+                            Union labor utilization at 90%. 
+                            Apprenticeship program expansion.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">Dragados USA</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Hudson Yards development. 
+                            Union workforce on major NYC projects. 
+                            Prevailing wage compliance.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">Flatiron Construction</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> NJ Turnpike Authority projects. 
+                            Union labor utilization. 
+                            Safety training programs.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">Bechtel Corporation</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Major infrastructure projects. 
+                            Union workforce development. 
+                            Prevailing wage compliance.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">Fluor Corporation</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Energy and infrastructure projects. 
+                            Union labor utilization. 
+                            Safety performance.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">AECOM</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Design-build projects in NJ/NY. 
+                            Union workforce on construction. 
+                            Prevailing wage compliance.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">Jacobs Engineering</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Infrastructure projects. 
+                            Union labor utilization. 
+                            Safety and training programs.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">Parsons Corporation</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Transportation projects. 
+                            Union workforce development. 
+                            Prevailing wage compliance.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">Balfour Beatty</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Infrastructure and building projects. 
+                            Union labor utilization. 
+                            Safety performance.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">Laing O'Rourke</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Major construction projects. 
+                            Union workforce development. 
+                            Prevailing wage compliance.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">Bouygues Construction</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Infrastructure projects. 
+                            Union labor utilization. 
+                            Safety and training programs.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">Vinci Construction</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Transportation projects. 
+                            Union workforce development. 
+                            Prevailing wage compliance.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">Royal BAM Group</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Infrastructure and building projects. 
+                            Union labor utilization. 
+                            Safety performance.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">Strabag SE</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Major construction projects. 
+                            Union workforce development. 
+                            Prevailing wage compliance.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">Webuild Group</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Infrastructure projects. 
+                            Union labor utilization. 
+                            Safety and training programs.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">Salini Impregilo</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Transportation projects. 
+                            Union workforce development. 
+                            Prevailing wage compliance.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">Ferrovial Construction</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Infrastructure and building projects. 
+                            Union labor utilization. 
+                            Safety performance.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">Acciona Construction</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Major construction projects. 
+                            Union workforce development. 
+                            Prevailing wage compliance.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">OHL Group</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Infrastructure projects. 
+                            Union labor utilization. 
+                            Safety and training programs.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">FCC Construction</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Transportation projects. 
+                            Union workforce development. 
+                            Prevailing wage compliance.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">ACS Group</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Infrastructure and building projects. 
+                            Union labor utilization. 
+                            Safety performance.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">Sacyr</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Major construction projects. 
+                            Union workforce development. 
+                            Prevailing wage compliance.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">Isolux Corsan</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Infrastructure projects. 
+                            Union labor utilization. 
+                            Safety and training programs.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">Abengoa</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Transportation projects. 
+                            Union workforce development. 
+                            Prevailing wage compliance.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">Elecnor</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Infrastructure and building projects. 
+                            Union labor utilization. 
+                            Safety performance.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">Técnicas Reunidas</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Major construction projects. 
+                            Union workforce development. 
+                            Prevailing wage compliance.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">Cobra Group</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Infrastructure projects. 
+                            Union labor utilization. 
+                            Safety and training programs.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">IDOM</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Transportation projects. 
+                            Union workforce development. 
+                            Prevailing wage compliance.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">Sener Group</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Infrastructure and building projects. 
+                            Union labor utilization. 
+                            Safety performance.
+                        </div>
+                    </div>
+
+                    <div class="company-card">
+                        <div class="company-name">Tecnicas Reunidas</div>
+                        <div class="company-status status-signatory">Signatory</div>
+                        <div class="company-updates">
+                            <strong>Latest Update:</strong> Major construction projects. 
+                            Union workforce development. 
+                            Prevailing wage compliance.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Strategic Insights -->
+            <div class="top-articles">
+                <div class="section-title">🎯 Strategic Intelligence Insights</div>
+                
+                <div class="article-card">
+                    <div class="article-title">Prevailing Wage Expansion Momentum</div>
+                    <div class="article-meta">
+                        <span class="article-source">Strategic Analysis</span>
+                        <span class="article-score">High Priority</span>
+                        <span class="article-category">Policy Watch</span>
+                    </div>
+                    <div class="article-meta">
+                        <span>Impact: High</span>
+                        <span>Jurisdiction: NJ/NY</span>
+                    </div>
+                    <div style="font-size: 12px; opacity: 0.8; margin-top: 8px;">
+                        <strong>Key Insight:</strong> Multiple articles indicate strong momentum for expanding prevailing wage requirements 
+                        to private construction projects in both NJ and NY. This represents a significant opportunity for Local 825 
+                        to advocate for expanded coverage and ensure proper enforcement.
+                    </div>
+                </div>
+
+                <div class="article-card">
+                    <div class="article-title">Infrastructure Bill Project Pipeline</div>
+                    <div class="article-meta">
+                        <span class="article-source">Strategic Analysis</span>
+                        <span class="article-score">High Priority</span>
+                        <span class="article-category">Project Intelligence</span>
+                    </div>
+                    <div class="article-meta">
+                        <span>Impact: High</span>
+                        <span>Jurisdiction: NJ/NY</span>
+                    </div>
+                    <div style="font-size: 12px; opacity: 0.8; margin-top: 8px;">
+                        <strong>Key Insight:</strong> Infrastructure bill funding is flowing to NJ and NY projects. Local 825 should 
+                        monitor project announcements, ensure union participation requirements, and track prevailing wage compliance 
+                        across all funded projects.
+                    </div>
+                </div>
+
+                <div class="article-card">
+                    <div class="article-title">Political Endorsement Strategy</div>
+                    <div class="article-meta">
+                        <span class="article-source">Strategic Analysis</span>
+                        <span class="article-score">Medium Priority</span>
+                        <span class="article-category">Political Intelligence</span>
+                    </div>
+                    <div class="article-meta">
+                        <span>Impact: Medium</span>
+                        <span>Jurisdiction: Local 825</span>
+                    </div>
+                    <div style="font-size: 12px; opacity: 0.8; margin-top: 8px;">
+                        <strong>Key Insight:</strong> Local 825's endorsement switch from Murphy to Ciattarelli indicates strategic 
+                        political positioning. This should be monitored for impact on labor policy and construction regulations 
+                        in both NJ and NY.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="widget-footer">
+            <button class="refresh-btn" onclick="refreshData()">🔄 Refresh Intelligence Data</button>
+            <div>Generated by Local 825 Intelligence System | Last Updated: August 28, 2025 18:26</div>
+            <div>© 2025 Local 825 Operating Engineers - Intelligence Division</div>
+        </div>
+    </div>
+
+    <script>
+        // Local 825 Dashboard Widget JavaScript
+        class Local825Dashboard {
+            constructor() {
+                this.lastUpdate = new Date();
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.updateTimestamps();
+                this.startAutoRefresh();
+            }
+
+            setupEventListeners() {
+                // Add hover effects for article cards
+                document.querySelectorAll('.article-card').forEach(card => {
+                    card.addEventListener('mouseenter', () => {
+                        card.style.transform = 'translateX(5px)';
+                    });
+                    
+                    card.addEventListener('mouseleave', () => {
+                        card.style.transform = 'translateX(0)';
+                    });
+                });
+
+                // Add hover effects for company cards
+                document.querySelectorAll('.company-card').forEach(card => {
+                    card.addEventListener('mouseenter', () => {
+                        card.style.transform = 'translateY(-2px)';
+                    });
+                    
+                    card.addEventListener('mouseleave', () => {
+                        card.style.transform = 'translateY(0)';
+                    });
+                });
+            }
+
+            updateTimestamps() {
+                const now = new Date();
+                const timeString = now.toLocaleString('en-US', {
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                // Update footer timestamp
+                const footer = document.querySelector('.widget-footer div:last-of-type');
+                if (footer) {
+                    footer.textContent = `© 2025 Local 825 Operating Engineers - Intelligence Division | Last Updated: ${timeString}`;
+                }
+            }
+
+            startAutoRefresh() {
+                // Auto-refresh every 30 minutes
+                setInterval(() => {
+                    this.refreshData();
+                }, 30 * 60 * 1000);
+            }
+
+            async refreshData() {
+                const refreshBtn = document.querySelector('.refresh-btn');
+                const originalText = refreshBtn.textContent;
+                
+                refreshBtn.textContent = '🔄 Refreshing...';
+                refreshBtn.disabled = true;
+
+                try {
+                    // Simulate data refresh
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    
+                    // Update timestamps
+                    this.updateTimestamps();
+                    
+                    // Show success message
+                    this.showNotification('Intelligence data refreshed successfully!', 'success');
+                    
+                } catch (error) {
+                    this.showNotification('Error refreshing data. Please try again.', 'error');
+                } finally {
+                    refreshBtn.textContent = originalText;
+                    refreshBtn.disabled = false;
+                }
+            }
+
+            showNotification(message, type = 'info') {
+                // Create notification element
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: ${type === 'success' ? '#2ecc71' : type === 'error' ? '#e74c3c' : '#3498db'};
+                    color: white;
+                    padding: 15px 20px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                    z-index: 10000;
+                    font-size: 14px;
+                    font-weight: 500;
+                    transform: translateX(100%);
+                    transition: transform 0.3s ease;
+                `;
+                notification.textContent = message;
+                
+                document.body.appendChild(notification);
+                
+                // Animate in
+                setTimeout(() => {
+                    notification.style.transform = 'translateX(0)';
+                }, 100);
+                
+                // Remove after 3 seconds
+                setTimeout(() => {
+                    notification.style.transform = 'translateX(100%)';
+                    setTimeout(() => {
+                        document.body.removeChild(notification);
+                    }, 300);
+                }, 3000);
+            }
+
+            // Method to update company tracking data
+            updateCompanyData(companyData) {
+                // This would integrate with your actual company tracking system
+                console.log('Updating company data:', companyData);
+            }
+
+            // Method to export report data
+            exportReport() {
+                const reportData = {
+                    date: this.lastUpdate.toISOString(),
+                    statistics: {
+                        totalArticles: 3243,
+                        njArticles: 2193,
+                        nyArticles: 948,
+                        local825Articles: 1
+                    },
+                    topArticles: Array.from(document.querySelectorAll('.article-card')).map(card => ({
+                        title: card.querySelector('.article-title').textContent,
+                        source: card.querySelector('.article-source').textContent,
+                        score: card.querySelector('.article-score').textContent,
+                        category: card.querySelector('.article-category').textContent
+                    })),
+                    companies: Array.from(document.querySelectorAll('.company-card')).map(card => ({
+                        name: card.querySelector('.company-name').textContent,
+                        status: card.querySelector('.company-status').textContent,
+                        updates: card.querySelector('.company-updates').textContent
+                    }))
+                };
+
+                // Create downloadable JSON file
+                const dataStr = JSON.stringify(reportData, null, 2);
+                const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                const url = URL.createObjectURL(dataBlob);
+                
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `local825_intelligence_report_${this.lastUpdate.toISOString().split('T')[0]}.json`;
+                link.click();
+                
+                URL.revokeObjectURL(url);
+            }
+        }
+
+        // Initialize dashboard when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            window.local825Dashboard = new Local825Dashboard();
+        });
+
+        // Global refresh function for button onclick
+        function refreshData() {
+            if (window.local825Dashboard) {
+                window.local825Dashboard.refreshData();
+            }
+        }
+
+        // WordPress integration helpers
+        if (typeof wp !== 'undefined' && wp.ajax) {
+            // WordPress AJAX integration
+            wp.ajax.post('local825_refresh_intelligence', {
+                action: 'local825_refresh_intelligence',
+                nonce: wp.ajax.settings.nonce
+            }).done(function(response) {
+                console.log('WordPress AJAX response:', response);
+            });
+        }
+
+        // Export functionality
+        function exportIntelligenceReport() {
+            if (window.local825Dashboard) {
+                window.local825Dashboard.exportReport();
+            }
+        }
+
+        // Add export button to footer
+        document.addEventListener('DOMContentLoaded', () => {
+            const footer = document.querySelector('.widget-footer');
+            if (footer) {
+                const exportBtn = document.createElement('button');
+                exportBtn.textContent = '📊 Export Report';
+                exportBtn.className = 'refresh-btn';
+                exportBtn.style.marginLeft = '10px';
+                exportBtn.onclick = exportIntelligenceReport;
+                footer.insertBefore(exportBtn, footer.firstChild);
+            }
+        });
+    </script>
+</body>
+</html>
