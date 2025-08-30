@@ -34,8 +34,10 @@ def home():
         'python_version': sys.version,
         'endpoints': {
             'health': '/health',
+            'data': '/data',
             'intelligence': '/intelligence',
-            'companies': '/companies'
+            'companies': '/companies',
+            'start-mcp': '/start-mcp'
         }
     })
 
@@ -49,6 +51,67 @@ def health():
         'mcp_server': 'running' if mcp_process else 'stopped',
         'mcp_error': mcp_startup_error
     })
+
+@app.route('/data')
+def get_data():
+    """Get intelligence data endpoint"""
+    try:
+        # For now, return sample data structure
+        # In production, this would query your database
+        sample_data = {
+            'articles': [
+                {
+                    'title': 'Sample Local 825 Intelligence Article',
+                    'source': 'Local 825 Intelligence System',
+                    'published': '2025-08-30',
+                    'summary': 'This is a sample article showing the data structure expected by the WordPress plugin.',
+                    'jurisdiction': 'Local 825 Specific',
+                    'relevance_score': 95,
+                    'category': 'Intelligence',
+                    'url': 'https://local825.org'
+                }
+            ],
+            'metadata': {
+                'total_articles': 1,
+                'last_updated': '2025-08-30T10:00:00Z'
+            }
+        }
+        return jsonify(sample_data)
+    except Exception as e:
+        logger.error(f"Error in /data endpoint: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/intelligence')
+def get_intelligence():
+    """Get intelligence data (alias for /data)"""
+    return get_data()
+
+@app.route('/companies')
+def get_companies():
+    """Get company data endpoint"""
+    try:
+        # For now, return sample company data
+        # In production, this would query your database
+        sample_companies = {
+            'skanska': {
+                'name': 'Skanska USA',
+                'industry': 'Construction',
+                'status': 'active',
+                'last_updated': '2025-08-30',
+                'notes': 'Major construction company in Local 825 jurisdiction'
+            },
+            'turner': {
+                'name': 'Turner Construction',
+                'industry': 'Construction',
+                'status': 'active',
+                'last_updated': '2025-08-30',
+                'notes': 'Leading construction management company'
+            }
+        }
+        return jsonify(sample_companies)
+    except Exception as e:
+        logger.error(f"Error in /companies endpoint: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/start-mcp')
 def start_mcp():
