@@ -69,3 +69,9 @@ reports/
 # Temporary files
 *.tmp
 *.temp
+
+# API keys and sensitive data
+*api_key*
+*password*
+*secret*
+*token*
