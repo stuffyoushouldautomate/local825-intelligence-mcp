@@ -50,6 +50,13 @@ class Local825IntelligencePlugin {
         add_action('wp_ajax_local825_generate_ai_post', array($this, 'ajax_generate_ai_post'));
         add_action('wp_ajax_local825_run_company_analysis', array($this, 'ajax_run_company_analysis'));
         
+        // Additional AJAX handlers for new functionality
+        add_action('wp_ajax_local825_save_ai_config', array($this, 'ajax_save_ai_config'));
+        add_action('wp_ajax_local825_clear_logs', array($this, 'ajax_clear_logs'));
+        add_action('wp_ajax_local825_export_logs', array($this, 'ajax_export_logs'));
+        add_action('wp_ajax_local825_get_recent_logs', array($this, 'ajax_get_recent_logs'));
+        add_action('wp_ajax_local825_get_widget_data', array($this, 'ajax_get_widget_data'));
+        
         // Dashboard widget
         add_action('wp_dashboard_setup', array($this, 'add_dashboard_widget'));
         
@@ -468,43 +475,172 @@ class Local825IntelligencePlugin {
             
             $post_id = wp_insert_post($post_data);
             
-            if (is_wp_error($post_id)) {
-                throw new Exception('Failed to create post: ' . $post_id->get_error_message());
-            }
-            
-            // Add jurisdiction taxonomy
-            $jurisdictions = array_unique(array_column($relevant_articles, 'jurisdiction'));
-            wp_set_object_terms($post_id, $jurisdictions, 'intelligence_jurisdiction');
-            
-            // Check for company mentions and add tags
-            $company_mentions = $this->extract_company_mentions($post_content);
-            if (!empty($company_mentions)) {
-                wp_set_post_tags($post_id, $company_mentions);
-            }
-            
-            $this->log_system_event('ai_insight_generated', 'AI insight post generated successfully', array(
-                'post_id' => $post_id,
-                'articles_analyzed' => count($relevant_articles)
-            ));
-            
-            return array(
-                'success' => true,
-                'data' => array(
-                    'post_id' => $post_id,
-                    'post_title' => $post_title,
-                    'post_url' => get_permalink($post_id)
-                ),
-                'message' => 'AI insight post generated successfully'
-            );
-            
-        } catch (Exception $e) {
-            $this->log_system_event('ai_insight_error', 'Error generating AI insight: ' . $e->getMessage());
-            return array(
-                'success' => false,
-                'message' => 'Error generating AI insight: ' . $e->getMessage()
-            );
+                    if (is_wp_error($post_id)) {
+            throw new Exception('Failed to create post: ' . $post_id->get_error_message());
         }
+        
+        // Add jurisdiction taxonomy
+        $jurisdictions = array_unique(array_column($relevant_articles, 'jurisdiction'));
+        wp_set_object_terms($post_id, $jurisdictions, 'intelligence_jurisdiction');
+        
+        // Check for company mentions and add tags
+        $company_mentions = $this->extract_company_mentions($post_content);
+        if (!empty($company_mentions)) {
+            wp_set_post_tags($post_id, $company_mentions);
+        }
+        
+        $this->log_system_event('ai_insight_generated', 'AI insight post generated successfully', array(
+            'post_id' => $post_id,
+            'articles_analyzed' => count($relevant_articles)
+        ));
+        
+        return array(
+            'success' => true,
+            'data' => $post_id,
+            'message' => 'AI insight post generated successfully'
+        );
+        
+    } catch (Exception $e) {
+        $this->log_system_event('ai_insight_error', 'Error generating AI insight: ' . $e->getMessage());
+        return array(
+            'success' => false,
+            'message' => 'Error generating AI insight: ' . $e->getMessage()
+        );
     }
+}
+
+// Additional AJAX handler methods
+public function ajax_save_ai_config() {
+    check_ajax_referer('local825_nonce', 'nonce');
+    
+    if (!current_user_can('manage_options')) {
+        wp_die('Unauthorized');
+    }
+    
+    $config = $_POST['config'];
+    update_option('local825_ai_config', $config);
+    
+    wp_send_json_success('AI configuration saved successfully');
+}
+
+public function ajax_clear_logs() {
+    check_ajax_referer('local825_nonce', 'nonce');
+    
+    if (!current_user_can('manage_options')) {
+        wp_die('Unauthorized');
+    }
+    
+    update_option('local825_system_logs', array());
+    wp_send_json_success('System logs cleared successfully');
+}
+
+public function ajax_get_recent_logs() {
+    check_ajax_referer('local825_nonce', 'nonce');
+    
+    $logs = $this->get_system_logs(10);
+    $formatted_logs = array();
+    
+    foreach ($logs as $log) {
+        $formatted_logs[] = array(
+            'timestamp' => date('g:i A', strtotime($log['timestamp'])),
+            'event_type' => $log['event_type'],
+            'message' => $log['message']
+        );
+    }
+    
+    wp_send_json_success($formatted_logs);
+}
+
+public function ajax_get_widget_data() {
+    check_ajax_referer('local825_nonce', 'nonce');
+    
+    $intelligence_data = $this->get_intelligence_data();
+    $system_logs = $this->get_system_logs(5);
+    
+    $widget_data = array(
+        'connection_status' => 'connected',
+        'last_update' => $this->get_last_update() ? date('M j, Y g:i A', strtotime($this->get_last_update())) : 'Never',
+        'total_articles' => isset($intelligence_data['metadata']['total_articles']) ? $intelligence_data['metadata']['total_articles'] : 0,
+        'recent_events' => count($system_logs),
+        'ai_insights_status' => wp_next_scheduled('local825_ai_insights_generation') ? 'Active' : 'Inactive',
+        'recent_activity' => array(),
+        'system_health' => array(
+            'cron_jobs' => wp_next_scheduled('local825_intelligence_update') ? true : false,
+            'database' => true
+        )
+    );
+    
+    // Format recent activity
+    foreach ($system_logs as $log) {
+        $widget_data['recent_activity'][] = array(
+            'time' => date('g:i A', strtotime($log['timestamp'])),
+            'type' => $log['event_type'],
+            'message' => $log['message']
+        );
+    }
+    
+    wp_send_json_success($widget_data);
+}
+
+public function ajax_export_logs() {
+    check_ajax_referer('local825_nonce', 'nonce');
+    
+    if (!current_user_can('manage_options')) {
+        wp_die('Unauthorized');
+    }
+    
+    $format = $_POST['format'];
+    $logs = $this->get_system_logs(1000);
+    
+    switch ($format) {
+        case 'json':
+            $data = json_encode($logs, JSON_PRETTY_PRINT);
+            break;
+        case 'csv':
+            $data = $this->logs_to_csv($logs);
+            break;
+        case 'text':
+            $data = $this->logs_to_text($logs);
+            break;
+        default:
+            wp_send_json_error('Invalid export format');
+            return;
+    }
+    
+    wp_send_json_success($data);
+}
+
+private function logs_to_csv($logs) {
+    $output = "Timestamp,Event Type,Message,User ID,Data\n";
+    
+    foreach ($logs as $log) {
+        $output .= '"' . $log['timestamp'] . '","' . 
+                   $log['event_type'] . '","' . 
+                   str_replace('"', '""', $log['message']) . '","' . 
+                   $log['user_id'] . '","' . 
+                   str_replace('"', '""', json_encode($log['data'])) . '"' . "\n";
+    }
+    
+    return $output;
+}
+
+private function logs_to_text($logs) {
+    $output = "Local 825 Intelligence System Logs\n";
+    $output .= "Generated: " . current_time('mysql') . "\n";
+    $output .= str_repeat("=", 50) . "\n\n";
+    
+    foreach ($logs as $log) {
+        $output .= "[" . $log['timestamp'] . "] " . $log['event_type'] . "\n";
+        $output .= "Message: " . $log['message'] . "\n";
+        $output .= "User: " . $log['user_id'] . "\n";
+        if (!empty($log['data'])) {
+            $output .= "Data: " . json_encode($log['data'], JSON_PRETTY_PRINT) . "\n";
+        }
+        $output .= str_repeat("-", 30) . "\n\n";
+    }
+    
+    return $output;
+}
     
     public function generate_company_profile_post() {
         try {
