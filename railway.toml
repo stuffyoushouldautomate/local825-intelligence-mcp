@@ -1,4 +1,4 @@
 [deploy]
-startCommand = "python app_simple.py"
+startCommand = "python test_app.py"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
