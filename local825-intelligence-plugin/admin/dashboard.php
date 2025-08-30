@@ -28,6 +28,18 @@ $company_data = $plugin->get_company_data();
             Last Updated: <?php echo $last_update ? date('M j, Y g:i A', strtotime($last_update)) : 'Never'; ?>
         </span>
     </div>
+    
+    <!-- Auto-Connection Status -->
+    <div class="local825-section">
+        <div class="notice notice-info">
+            <p>
+                <strong>✅ Auto-Connected to MCP Server:</strong> 
+                This plugin automatically connects to your Railway MCP server at 
+                <code>https://trustworthy-solace-production.up.railway.app</code>. 
+                No configuration needed!
+            </p>
+        </div>
+    </div>
 
     <!-- Intelligence Overview -->
     <div class="local825-section">

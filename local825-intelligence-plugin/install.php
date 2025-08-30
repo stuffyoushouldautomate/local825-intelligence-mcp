@@ -1,291 +1,487 @@
 <?php
 /**
- * Local 825 Intelligence Plugin Installation Script
- * 
- * This script helps set up the plugin with default data and configurations.
- * Run this after activating the plugin to populate initial data.
+ * Local 825 Intelligence Plugin - Installation Script
+ * Handles plugin activation, deactivation, and database setup
  */
 
 // Prevent direct access
 if (!defined('ABSPATH')) {
-    // If not in WordPress, check if we're in the plugin directory
-    if (!file_exists('../../../wp-config.php')) {
-        die('This script must be run from within WordPress or the plugin directory.');
-    }
+    exit;
 }
 
-// Include WordPress if not already loaded
-if (!function_exists('wp_loaded')) {
-    require_once('../../../wp-config.php');
-}
-
-// Check if user can manage options
-if (!current_user_can('manage_options')) {
-    die('You do not have sufficient permissions to run this script.');
-}
-
-// Plugin installation class
-class Local825PluginInstaller {
+/**
+ * Plugin activation hook
+ */
+function local825_intelligence_activate() {
+    global $wpdb;
     
-    private $default_settings = [
-        'local825_mcp_server_url' => 'https://your-railway-app.railway.app',
-        'local825_api_key' => '',
+    // Create default options
+    $default_settings = array(
         'local825_auto_update' => '1',
-        'local825_notification_email' => '',
-        'local825_update_frequency' => '60',
-        'local825_data_retention' => '30',
-        'local825_debug_mode' => '0'
-    ];
+        'local825_intelligence_data' => array(),
+        'local825_company_data' => array(),
+        'local825_last_update' => '',
+        'local825_system_logs' => array(),
+        'local825_ai_config' => array(
+            'relevance_threshold' => 80,
+            'insight_frequency' => 600, // 10 minutes
+            'content_quality' => 'standard'
+        )
+    );
     
-    private $local825_target_companies = [
-        'Skanska USA',
-        'Tutor Perini Corporation',
-        'Kiewit Infrastructure',
-        'Walsh Construction',
-        'Granite Construction',
-        'Dragados USA',
-        'Flatiron Construction',
-        'Bechtel Corporation',
-        'Fluor Corporation',
-        'AECOM',
-        'Jacobs Engineering',
-        'Parsons Corporation',
-        'Balfour Beatty',
-        'Laing O\'Rourke',
-        'Bouygues Construction',
-        'Vinci Construction',
-        'Royal BAM Group',
-        'Strabag SE',
-        'Webuild Group',
-        'Salini Impregilo',
-        'Ferrovial Construction',
-        'Acciona Construction',
-        'OHL Group',
-        'FCC Construction',
-        'ACS Group',
-        'Sacyr',
-        'Isolux Corsan',
-        'Abengoa',
-        'Elecnor',
-        'Técnicas Reunidas',
-        'Cobra Group',
-        'IDOM',
-        'Sener Group'
-    ];
-    
-    private $general_construction_companies = [
-        'Turner Construction',
-        'Gilbane Building Company',
-        'Whiting-Turner Contracting',
-        'Clark Construction Group',
-        'Brasfield & Gorrie',
-        'JE Dunn Construction',
-        'McCarthy Building Companies',
-        'DPR Construction',
-        'Suffolk Construction',
-        'Hensel Phelps',
-        'Mortenson Construction',
-        'PCL Construction',
-        'EllisDon',
-        'Ledcor Group',
-        'Bird Construction'
-    ];
-    
-    public function install() {
-        echo "<h1>Local 825 Intelligence Plugin Installation</h1>\n";
-        echo "<p>Setting up the plugin with default configurations...</p>\n";
-        
-        try {
-            // Install default companies
-            $this->install_default_companies();
-            
-            // Install default settings
-            $this->install_default_settings();
-            
-            // Create sample intelligence data
-            $this->create_sample_data();
-            
-            // Set up cron jobs
-            $this->setup_cron_jobs();
-            
-            echo "<div style='color: green; padding: 10px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; margin: 10px 0;'>\n";
-            echo "<strong>Installation Complete!</strong><br>\n";
-            echo "The Local 825 Intelligence Plugin has been successfully installed.\n";
-            echo "</div>\n";
-            
-            echo "<h2>Next Steps:</h2>\n";
-            echo "<ol>\n";
-            echo "<li>Go to <strong>Local 825 Intel → Settings</strong> to configure your MCP server</li>\n";
-            echo "<li>Enter your Railway-hosted MCP server URL</li>\n";
-            echo "<li>Set your API key</li>\n";
-            echo "<li>Test the MCP connection</li>\n";
-            echo "<li>Configure notification settings</li>\n";
-            echo "</ol>\n";
-            
-            echo "<h2>Default Data Installed:</h2>\n";
-            echo "<ul>\n";
-            echo "<li><strong>" . count($this->default_companies) . " companies</strong> for tracking</li>\n";
-            echo "<li><strong>Default settings</strong> for optimal performance</li>\n";
-            echo "<li><strong>Sample intelligence data</strong> for testing</li>\n";
-            echo "<li><strong>Cron jobs</strong> for automated updates</li>\n";
-            echo "</ul>\n";
-            
-        } catch (Exception $e) {
-            echo "<div style='color: #721c24; padding: 10px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; margin: 10px 0;'>\n";
-            echo "<strong>Installation Error:</strong> " . $e->getMessage() . "\n";
-            echo "</div>\n";
+    foreach ($default_settings as $option_name => $default_value) {
+        if (get_option($option_name) === false) {
+            add_option($option_name, $default_value);
         }
     }
     
-    private function install_default_companies() {
-        echo "<p>Installing default companies...</p>\n";
-        
-        $company_list = implode("\n", $this->default_companies);
-        update_option('local825_company_list', $company_list);
-        
-        // Create company tracking data
-        $company_data = [];
-        foreach ($this->default_companies as $company) {
-            $company_id = sanitize_title($company);
-            $company_data[$company_id] = [
-                'name' => $company,
-                'status' => 'Signatory',
-                'location' => 'NJ/NY Region',
-                'last_update' => current_time('mysql'),
-                'notes' => 'Default company data - update with actual information'
-            ];
-        }
-        
-        update_option('local825_company_data', $company_data);
-        echo "<p>✓ Installed " . count($this->default_companies) . " companies</p>\n";
+    // Set up cron jobs
+    if (!wp_next_scheduled('local825_intelligence_update')) {
+        wp_schedule_event(time(), 'every_5_minutes', 'local825_intelligence_update');
     }
     
-    private function install_default_settings() {
-        echo "<p>Installing default settings...</p>\n";
-        
-        foreach ($this->default_settings as $option => $value) {
-            if (empty(get_option($option))) {
-                update_option($option, $value);
-            }
-        }
-        
-        // Set notification email to admin email if not set
-        if (empty(get_option('local825_notification_email'))) {
-            update_option('local825_notification_email', get_option('admin_email'));
-        }
-        
-        echo "<p>✓ Installed default settings</p>\n";
+    if (!wp_next_scheduled('local825_company_tracking_update')) {
+        wp_schedule_event(time(), 'daily', 'local825_company_tracking_update');
     }
     
-    private function create_sample_data() {
-        echo "<p>Creating sample intelligence data...</p>\n";
-        
-        $sample_data = [
-            'articles' => [
-                [
-                    'title' => 'Sample: New Jersey Infrastructure Projects Announced',
-                    'url' => 'https://example.com/sample-article',
-                    'source' => 'Sample Source',
-                    'published' => current_time('mysql'),
-                    'summary' => 'This is sample data to demonstrate the plugin functionality. Replace with real intelligence data from your MCP server.',
-                    'jurisdiction' => 'New Jersey',
-                    'relevance_score' => 10,
-                    'category' => 'Construction Projects'
-                ],
-                [
-                    'title' => 'Sample: Local 825 Operating Engineers Update',
-                    'url' => 'https://example.com/sample-article-2',
-                    'source' => 'Sample Source',
-                    'published' => current_time('mysql'),
-                    'summary' => 'Sample article showing Local 825 specific content. This will be replaced with real data.',
-                    'jurisdiction' => 'Local 825 Specific',
-                    'relevance_score' => 12,
-                    'category' => 'Local 825 Specific'
-                ]
-            ],
-            'metadata' => [
-                'total_articles' => 2,
-                'last_updated' => current_time('mysql')
-            ]
-        ];
-        
-        update_option('local825_intelligence_data', $sample_data);
-        update_option('local825_last_update', current_time('mysql'));
-        
-        echo "<p>✓ Created sample intelligence data</p>\n";
+    if (!wp_next_scheduled('local825_ai_insights_generation')) {
+        wp_schedule_event(time(), 'every_10_minutes', 'local825_ai_insights_generation');
     }
     
-    private function setup_cron_jobs() {
-        echo "<p>Setting up cron jobs...</p>\n";
-        
-        // Clear existing cron jobs
-        wp_clear_scheduled_hook('local825_intelligence_update');
-        wp_clear_scheduled_hook('local825_company_tracking_update');
-        
-        // Schedule new cron jobs
-        if (!wp_next_scheduled('local825_intelligence_update')) {
-            wp_schedule_event(time(), 'hourly', 'local825_intelligence_update');
-        }
-        
-        if (!wp_next_scheduled('local825_company_tracking_update')) {
-            wp_schedule_event(time(), 'daily', 'local825_company_tracking_update');
-        }
-        
-        echo "<p>✓ Scheduled cron jobs for automated updates</p>\n";
+    if (!wp_next_scheduled('local825_company_profiles_daily')) {
+        wp_schedule_event(time(), 'daily', 'local825_company_profiles_daily');
     }
     
-    public function uninstall() {
-        echo "<h1>Local 825 Intelligence Plugin Uninstallation</h1>\n";
-        echo "<p>Removing plugin data and settings...</p>\n";
+    // Flush rewrite rules for custom post types
+    flush_rewrite_rules();
+    
+    // Create initial system log entry
+    $initial_logs = array(
+        array(
+            'timestamp' => current_time('mysql'),
+            'event_type' => 'plugin_activated',
+            'message' => 'Local 825 Intelligence Plugin activated successfully',
+            'data' => array(
+                'version' => LOCAL825_PLUGIN_VERSION,
+                'wordpress_version' => get_bloginfo('version'),
+                'php_version' => PHP_VERSION
+            ),
+            'user_id' => get_current_user_id()
+        )
+    );
+    
+    update_option('local825_system_logs', $initial_logs);
+    
+    // Create sample company data if none exists
+    $existing_company_data = get_option('local825_company_data', array());
+    if (empty($existing_company_data)) {
+        $sample_companies = array(
+            'skanska' => array(
+                'name' => 'Skanska USA',
+                'industry' => 'Construction',
+                'status' => 'active',
+                'last_updated' => current_time('mysql'),
+                'notes' => 'Major construction company in Local 825 jurisdiction - monitored by DataPilotPlus'
+            ),
+            'turner' => array(
+                'name' => 'Turner Construction',
+                'industry' => 'Construction',
+                'status' => 'active',
+                'last_updated' => current_time('mysql'),
+                'notes' => 'Leading construction management company - tracked for Local 825 opportunities'
+            ),
+            'bechtel' => array(
+                'name' => 'Bechtel Corporation',
+                'industry' => 'Construction & Engineering',
+                'status' => 'active',
+                'last_updated' => current_time('mysql'),
+                'notes' => 'Global engineering and construction company - Local 825 jurisdiction monitoring'
+            )
+        );
         
-        try {
-            // Remove all plugin options
-            $options_to_remove = [
-                'local825_mcp_server_url',
-                'local825_api_key',
-                'local825_auto_update',
-                'local825_notification_email',
-                'local825_company_list',
-                'local825_company_data',
-                'local825_intelligence_data',
-                'local825_last_update',
-                'local825_update_frequency',
-                'local825_data_retention',
-                'local825_debug_mode'
-            ];
-            
-            foreach ($options_to_remove as $option) {
-                delete_option($option);
-            }
-            
-            // Clear cron jobs
-            wp_clear_scheduled_hook('local825_intelligence_update');
-            wp_clear_scheduled_hook('local825_company_tracking_update');
-            
-            echo "<div style='color: green; padding: 10px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; margin: 10px 0;'>\n";
-            echo "<strong>Uninstallation Complete!</strong><br>\n";
-            echo "All plugin data and settings have been removed.\n";
-            echo "</div>\n";
-            
-        } catch (Exception $e) {
-            echo "<div style='color: #721c24; padding: 10px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; margin: 10px 0;'>\n";
-            echo "<strong>Uninstallation Error:</strong> " . $e->getMessage() . "\n";
-            echo "</div>\n";
+        update_option('local825_company_data', $sample_companies);
+    }
+    
+    // Create initial intelligence data structure
+    $initial_intelligence = array(
+        'articles' => array(
+            array(
+                'title' => 'DataPilotPlus Local 825 Intelligence System Launch',
+                'source' => 'DataPilotPlus Intelligence',
+                'published' => current_time('mysql'),
+                'summary' => 'DataPilotPlus has successfully launched the Local 825 Intelligence System, providing real-time monitoring and strategic insights for Local 825 Operating Engineers.',
+                'jurisdiction' => 'Local 825 Specific',
+                'relevance_score' => 95,
+                'category' => 'System Launch',
+                'url' => 'https://datapilotplus.com'
+            )
+        ),
+        'metadata' => array(
+            'total_articles' => 1,
+            'last_updated' => current_time('mysql'),
+            'data_source' => 'DataPilotPlus System'
+        )
+    );
+    
+    update_option('local825_intelligence_data', $initial_intelligence);
+    update_option('local825_last_update', current_time('mysql'));
+    
+    // Create custom post types and taxonomies
+    local825_create_custom_post_types();
+    
+    // Create sample intelligence post
+    local825_create_sample_intelligence_post();
+    
+    // Create sample company posts
+    local825_create_sample_company_posts();
+}
+
+/**
+ * Plugin deactivation hook
+ */
+function local825_intelligence_deactivate() {
+    // Clear cron jobs
+    wp_clear_scheduled_hook('local825_intelligence_update');
+    wp_clear_scheduled_hook('local825_company_tracking_update');
+    wp_clear_scheduled_hook('local825_ai_insights_generation');
+    wp_clear_scheduled_hook('local825_company_profiles_daily');
+    
+    // Flush rewrite rules
+    flush_rewrite_rules();
+    
+    // Log deactivation
+    $logs = get_option('local825_system_logs', array());
+    $logs[] = array(
+        'timestamp' => current_time('mysql'),
+        'event_type' => 'plugin_deactivated',
+        'message' => 'Local 825 Intelligence Plugin deactivated',
+        'data' => array(),
+        'user_id' => get_current_user_id()
+    );
+    
+    update_option('local825_system_logs', $logs);
+}
+
+/**
+ * Plugin uninstall hook
+ */
+function local825_intelligence_uninstall() {
+    // Remove all plugin options
+    $options_to_remove = array(
+        'local825_auto_update',
+        'local825_intelligence_data',
+        'local825_company_data',
+        'local825_last_update',
+        'local825_system_logs',
+        'local825_ai_config'
+    );
+    
+    foreach ($options_to_remove as $option) {
+        delete_option($option);
+    }
+    
+    // Remove all custom post types and their content
+    local825_remove_custom_post_types();
+    
+    // Clear any remaining cron jobs
+    wp_clear_scheduled_hook('local825_intelligence_update');
+    wp_clear_scheduled_hook('local825_company_tracking_update');
+    wp_clear_scheduled_hook('local825_ai_insights_generation');
+    wp_clear_scheduled_hook('local825_company_profiles_daily');
+}
+
+/**
+ * Create custom post types and taxonomies
+ */
+function local825_create_custom_post_types() {
+    // Register Company custom post type
+    register_post_type('local825_company', array(
+        'labels' => array(
+            'name' => 'Companies',
+            'singular_name' => 'Company',
+            'add_new' => 'Add New Company',
+            'add_new_item' => 'Add New Company',
+            'edit_item' => 'Edit Company',
+            'new_item' => 'New Company',
+            'view_item' => 'View Company',
+            'search_items' => 'Search Companies',
+            'not_found' => 'No companies found',
+            'not_found_in_trash' => 'No companies found in trash'
+        ),
+        'public' => true,
+        'has_archive' => true,
+        'supports' => array('title', 'editor', 'thumbnail', 'excerpt', 'custom-fields'),
+        'menu_icon' => 'dashicons-building',
+        'rewrite' => array('slug' => 'companies'),
+        'show_in_rest' => true
+    ));
+    
+    // Register Intelligence custom post type
+    register_post_type('local825_intelligence', array(
+        'labels' => array(
+            'name' => 'Intelligence',
+            'singular_name' => 'Intelligence',
+            'add_new' => 'Add New Intelligence',
+            'add_new_item' => 'Add New Intelligence',
+            'edit_item' => 'Edit Intelligence',
+            'new_item' => 'New Intelligence',
+            'view_item' => 'View Intelligence',
+            'search_items' => 'Search Intelligence',
+            'not_found' => 'No intelligence found',
+            'not_found_in_trash' => 'No intelligence found in trash'
+        ),
+        'public' => true,
+        'has_archive' => true,
+        'supports' => array('title', 'editor', 'thumbnail', 'excerpt', 'custom-fields'),
+        'menu_icon' => 'dashicons-chart-area',
+        'rewrite' => array('slug' => 'intelligence'),
+        'show_in_rest' => true
+    ));
+    
+    // Register custom taxonomies
+    register_taxonomy('company_industry', 'local825_company', array(
+        'labels' => array(
+            'name' => 'Industries',
+            'singular_name' => 'Industry',
+            'search_items' => 'Search Industries',
+            'all_items' => 'All Industries',
+            'parent_item' => 'Parent Industry',
+            'parent_item_colon' => 'Parent Industry:',
+            'edit_item' => 'Edit Industry',
+            'update_item' => 'Update Industry',
+            'add_new_item' => 'Add New Industry',
+            'new_item_name' => 'New Industry Name',
+            'menu_name' => 'Industries'
+        ),
+        'hierarchical' => true,
+        'show_ui' => true,
+        'show_admin_column' => true,
+        'query_var' => true,
+        'rewrite' => array('slug' => 'industry')
+    ));
+    
+    register_taxonomy('intelligence_jurisdiction', 'local825_intelligence', array(
+        'labels' => array(
+            'name' => 'Jurisdictions',
+            'singular_name' => 'Jurisdiction',
+            'search_items' => 'Search Jurisdictions',
+            'all_items' => 'All Jurisdictions',
+            'edit_item' => 'Edit Jurisdiction',
+            'update_item' => 'Update Jurisdiction',
+            'add_new_item' => 'Add New Jurisdiction',
+            'new_item_name' => 'New Jurisdiction Name',
+            'menu_name' => 'Jurisdictions'
+        ),
+        'hierarchical' => false,
+        'show_ui' => true,
+        'show_admin_column' => true,
+        'query_var' => true,
+        'rewrite' => array('slug' => 'jurisdiction')
+    ));
+    
+    // Flush rewrite rules
+    flush_rewrite_rules();
+}
+
+/**
+ * Create sample intelligence post
+ */
+function local825_create_sample_intelligence_post() {
+    // Check if sample post already exists
+    $existing_posts = get_posts(array(
+        'post_type' => 'local825_intelligence',
+        'meta_query' => array(
+            array(
+                'key' => 'local825_sample_post',
+                'value' => '1',
+                'compare' => '='
+            )
+        ),
+        'posts_per_page' => 1
+    ));
+    
+    if (empty($existing_posts)) {
+        $post_data = array(
+            'post_title' => 'Welcome to Local 825 Intelligence System',
+            'post_content' => '<div class="local825-intelligence-insight">
+                <h2>🔍 Welcome to Local 825 Intelligence</h2>
+                <p>This is your new Local 825 Intelligence System powered by DataPilotPlus. The system will automatically:</p>
+                <ul>
+                    <li>Monitor construction industry news and developments</li>
+                    <li>Track relevant companies and opportunities</li>
+                    <li>Generate AI-powered insights and analysis</li>
+                    <li>Create comprehensive reports for Local 825 members</li>
+                </ul>
+                <p><strong>Next Steps:</strong></p>
+                <ol>
+                    <li>Visit the AI Insights page to generate your first automated intelligence post</li>
+                    <li>Check the Company Tracking page to manage target companies</li>
+                    <li>Review the System Logs to monitor automation status</li>
+                    <li>Customize settings in the AI Configuration section</li>
+                </ol>
+                <p>The system is now actively monitoring and will generate insights every 10 minutes based on relevant intelligence data.</p>
+            </div>',
+            'post_status' => 'publish',
+            'post_type' => 'local825_intelligence',
+            'post_author' => get_current_user_id(),
+            'meta_input' => array(
+                'local825_sample_post' => '1',
+                'local825_insight_type' => 'welcome',
+                'local825_generated_at' => current_time('mysql')
+            )
+        );
+        
+        $post_id = wp_insert_post($post_data);
+        
+        if (!is_wp_error($post_id)) {
+            // Add jurisdiction taxonomy
+            wp_set_object_terms($post_id, 'Local 825 Specific', 'intelligence_jurisdiction');
         }
     }
 }
 
-// Run installation if accessed directly
-if (basename($_SERVER['SCRIPT_NAME']) === 'install.php') {
-    $installer = new Local825PluginInstaller();
+/**
+ * Create sample company posts
+ */
+function local825_create_sample_company_posts() {
+    $sample_companies = array(
+        'Skanska USA' => array(
+            'industry' => 'Construction',
+            'notes' => 'Major construction company in Local 825 jurisdiction - monitored by DataPilotPlus'
+        ),
+        'Turner Construction' => array(
+            'industry' => 'Construction',
+            'notes' => 'Leading construction management company - tracked for Local 825 opportunities'
+        ),
+        'Bechtel Corporation' => array(
+            'industry' => 'Construction & Engineering',
+            'notes' => 'Global engineering and construction company - Local 825 jurisdiction monitoring'
+        )
+    );
     
-    if (isset($_GET['action']) && $_GET['action'] === 'uninstall') {
-        $installer->uninstall();
-    } else {
-        $installer->install();
+    foreach ($sample_companies as $company_name => $company_data) {
+        // Check if company post already exists
+        $existing_posts = get_posts(array(
+            'post_type' => 'local825_company',
+            'title' => $company_name,
+            'posts_per_page' => 1
+        ));
+        
+        if (empty($existing_posts)) {
+            $post_data = array(
+                'post_title' => $company_name,
+                'post_content' => '<div class="local825-company-profile">
+                    <h2>🏢 ' . esc_html($company_name) . ' - Company Profile</h2>
+                    <p><strong>Last Updated:</strong> ' . current_time('mysql') . '</p>
+                    
+                    <div class="company-overview">
+                        <h3>Company Overview</h3>
+                        <table class="company-details">
+                            <tr><td><strong>Industry:</strong></td><td>' . esc_html($company_data['industry']) . '</td></tr>
+                            <tr><td><strong>Status:</strong></td><td>Active</td></tr>
+                            <tr><td><strong>Source:</strong></td><td>DataPilotPlus Intelligence</td></tr>
+                        </table>
+                    </div>
+                    
+                    <div class="company-notes">
+                        <h3>Notes & Analysis</h3>
+                        <p>' . esc_html($company_data['notes']) . '</p>
+                    </div>
+                    
+                    <div class="local825-relevance">
+                        <h3>Local 825 Relevance</h3>
+                        <p>This company has been identified as relevant to Local 825 Operating Engineers based on:</p>
+                        <ul>
+                            <li>Industry alignment with construction and engineering</li>
+                            <li>Geographic presence in Local 825 jurisdictions</li>
+                            <li>Potential for partnership or employment opportunities</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="monitoring-status">
+                        <h3>Monitoring Status</h3>
+                        <p><strong>Current Status:</strong> <span class="status-active">Active</span></p>
+                        <p>This company is actively monitored by the DataPilotPlus Local 825 Intelligence System for updates and opportunities.</p>
+                    </div>
+                </div>',
+                'post_status' => 'publish',
+                'post_type' => 'local825_company',
+                'post_author' => get_current_user_id(),
+                'meta_input' => array(
+                    'local825_sample_company' => '1',
+                    'local825_industry' => $company_data['industry'],
+                    'local825_status' => 'active',
+                    'local825_last_updated' => current_time('mysql'),
+                    'local825_notes' => $company_data['notes']
+                )
+            );
+            
+            $post_id = wp_insert_post($post_data);
+            
+            if (!is_wp_error($post_id)) {
+                // Set industry taxonomy
+                wp_set_object_terms($post_id, $company_data['industry'], 'company_industry');
+            }
+        }
+    }
+}
+
+/**
+ * Remove custom post types and their content
+ */
+function local825_remove_custom_post_types() {
+    // Get all posts of custom post types
+    $company_posts = get_posts(array(
+        'post_type' => 'local825_company',
+        'numberposts' => -1,
+        'post_status' => 'any'
+    ));
+    
+    $intelligence_posts = get_posts(array(
+        'post_type' => 'local825_intelligence',
+        'numberposts' => -1,
+        'post_status' => 'any'
+    ));
+    
+    // Delete all company posts
+    foreach ($company_posts as $post) {
+        wp_delete_post($post->ID, true);
     }
     
-    echo "<hr>\n";
-    echo "<p><small>Installation script completed. You can now delete this file for security.</small></p>\n";
+    // Delete all intelligence posts
+    foreach ($intelligence_posts as $post) {
+        wp_delete_post($post->ID, true);
+    }
+    
+    // Remove taxonomies
+    unregister_taxonomy('company_industry');
+    unregister_taxonomy('intelligence_jurisdiction');
+    
+    // Remove post types
+    unregister_post_type('local825_company');
+    unregister_post_type('local825_intelligence');
 }
-?>
+
+/**
+ * Add custom cron intervals
+ */
+function local825_add_cron_intervals($schedules) {
+    $schedules['every_5_minutes'] = array(
+        'interval' => 300,
+        'display' => 'Every 5 Minutes'
+    );
+    $schedules['every_10_minutes'] = array(
+        'interval' => 600,
+        'display' => 'Every 10 Minutes'
+    );
+    return $schedules;
+}
+
+// Hook functions
+add_action('init', 'local825_create_custom_post_types');
+add_filter('cron_schedules', 'local825_add_cron_intervals');
+
+// Register activation/deactivation hooks
+register_activation_hook(__FILE__, 'local825_intelligence_activate');
+register_deactivation_hook(__FILE__, 'local825_intelligence_deactivate');
+register_uninstall_hook(__FILE__, 'local825_intelligence_uninstall');

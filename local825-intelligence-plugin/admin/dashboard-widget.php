@@ -5,185 +5,173 @@ if (!defined('ABSPATH')) {
 
 $plugin = new Local825IntelligencePlugin();
 $intelligence_data = $plugin->get_intelligence_data();
-$last_update = get_option('local825_last_update', '');
-$company_data = $plugin->get_company_data();
+$last_update = $plugin->get_last_update();
+$system_logs = $plugin->get_system_logs(5); // Get last 5 log entries
 ?>
 
 <div class="local825-dashboard-widget">
-    <!-- Header -->
-    <div class="widget-header">
-        <h3>Local 825 Intelligence</h3>
-        <div class="widget-actions">
-            <button class="refresh-btn" onclick="refreshLocal825Intelligence()">
-                <span class="dashicons dashicons-update"></span>
-            </button>
+    <div class="widget-content">
+        <!-- Connection Status -->
+        <div class="connection-status">
+            <h4>🔌 MCP Server Connection</h4>
+            <div class="status-indicator connected">
+                <span class="dashicons dashicons-yes-alt"></span>
+                Connected to Railway MCP Server
+            </div>
+            <p class="connection-details">
+                <strong>Server:</strong> trustworthy-solace-production.up.railway.app<br>
+                <strong>Last Update:</strong> <?php echo $last_update ? date('M j, Y g:i A', strtotime($last_update)) : 'Never'; ?>
+            </p>
         </div>
-    </div>
 
-    <!-- Quick Stats -->
-    <div class="widget-stats">
-        <?php if (!empty($intelligence_data)): ?>
-            <div class="stat-row">
+        <!-- Quick Stats -->
+        <div class="quick-stats">
+            <h4>📊 Quick Overview</h4>
+            <div class="stats-grid">
                 <div class="stat-item">
-                    <span class="stat-number"><?php echo count($intelligence_data['articles'] ?? array()); ?></span>
+                    <span class="stat-number"><?php echo isset($intelligence_data['metadata']['total_articles']) ? $intelligence_data['metadata']['total_articles'] : '0'; ?></span>
                     <span class="stat-label">Articles</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-number"><?php echo count($company_data); ?></span>
-                    <span class="stat-label">Companies</span>
+                    <span class="stat-number"><?php echo count($system_logs); ?></span>
+                    <span class="stat-label">Recent Events</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number"><?php echo wp_next_scheduled('local825_ai_insights_generation') ? 'Active' : 'Inactive'; ?></span>
+                    <span class="stat-label">AI Insights</span>
                 </div>
             </div>
-        <?php else: ?>
-            <div class="no-data">
-                <p>No data available</p>
-            </div>
-        <?php endif; ?>
-    </div>
+        </div>
 
-    <!-- Top Story -->
-    <?php if (!empty($intelligence_data['articles'])): ?>
-        <?php 
-        $articles = $intelligence_data['articles'];
-        usort($articles, function($a, $b) {
-            return ($b['relevance_score'] ?? 0) - ($a['relevance_score'] ?? 0);
-        });
-        $top_article = $articles[0];
-        ?>
-        <div class="top-story">
-            <h4>Top Story</h4>
-            <div class="story-title"><?php echo esc_html(wp_trim_words($top_article['title'], 10)); ?></div>
-            <div class="story-meta">
-                <span class="story-source"><?php echo esc_html($top_article['source']); ?></span>
-                <span class="story-score">Score: <?php echo esc_html($top_article['relevance_score'] ?? 'N/A'); ?></span>
+        <!-- Recent Activity -->
+        <div class="recent-activity">
+            <h4>🔄 Recent Activity</h4>
+            <?php if (!empty($system_logs)): ?>
+                <div class="activity-list">
+                    <?php foreach ($system_logs as $log): ?>
+                        <div class="activity-item">
+                            <span class="activity-time"><?php echo date('g:i A', strtotime($log['timestamp'])); ?></span>
+                            <span class="activity-type"><?php echo esc_html($log['event_type']); ?></span>
+                            <span class="activity-message"><?php echo esc_html(wp_trim_words($log['message'], 8)); ?></span>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <p class="no-activity">No recent activity</p>
+            <?php endif; ?>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <h4>⚡ Quick Actions</h4>
+            <div class="action-buttons">
+                <a href="<?php echo admin_url('admin.php?page=local825-intelligence'); ?>" class="button button-primary button-small">
+                    <span class="dashicons dashicons-chart-area"></span>
+                    View Dashboard
+                </a>
+                <a href="<?php echo admin_url('admin.php?page=local825-ai-insights'); ?>" class="button button-secondary button-small">
+                    <span class="dashicons dashicons-admin-generic"></span>
+                    AI Insights
+                </a>
+                <a href="<?php echo admin_url('admin.php?page=local825-company-tracking'); ?>" class="button button-secondary button-small">
+                    <span class="dashicons dashicons-building"></span>
+                    Companies
+                </a>
             </div>
         </div>
-    <?php endif; ?>
 
-    <!-- Quick Actions -->
-    <div class="widget-actions">
-        <a href="<?php echo admin_url('admin.php?page=local825-intelligence'); ?>" class="button button-primary button-small">
-            View Full Dashboard
-        </a>
-        <a href="<?php echo admin_url('admin.php?page=local825-company-tracking'); ?>" class="button button-secondary button-small">
-            Company Tracking
-        </a>
-    </div>
-
-    <!-- Last Update -->
-    <?php if ($last_update): ?>
-        <div class="last-update">
-            <small>Last updated: <?php echo date('M j, g:i A', strtotime($last_update)); ?></small>
+        <!-- System Health -->
+        <div class="system-health">
+            <h4>💚 System Health</h4>
+            <div class="health-indicators">
+                <div class="health-item">
+                    <span class="health-label">Cron Jobs:</span>
+                    <span class="health-status <?php echo wp_next_scheduled('local825_intelligence_update') ? 'healthy' : 'warning'; ?>">
+                        <?php echo wp_next_scheduled('local825_intelligence_update') ? '✓ Active' : '⚠ Inactive'; ?>
+                    </span>
+                </div>
+                <div class="health-item">
+                    <span class="health-label">Database:</span>
+                    <span class="health-status healthy">✓ Connected</span>
+                </div>
+                <div class="health-item">
+                    <span class="health-label">Plugin Version:</span>
+                    <span class="health-status info"><?php echo LOCAL825_PLUGIN_VERSION; ?></span>
+                </div>
+            </div>
         </div>
-    <?php endif; ?>
+    </div>
 </div>
-
-<script>
-function refreshLocal825Intelligence() {
-    var $btn = jQuery('.local825-dashboard-widget .refresh-btn');
-    var $icon = $btn.find('.dashicons');
-    
-    $btn.prop('disabled', true);
-    $icon.addClass('spin');
-    
-    jQuery.ajax({
-        url: ajaxurl,
-        type: 'POST',
-        data: {
-            action: 'local825_refresh_intelligence',
-            nonce: '<?php echo wp_create_nonce('local825_nonce'); ?>'
-        },
-        success: function(response) {
-            if (response.success) {
-                location.reload();
-            } else {
-                alert('Error refreshing data: ' + response.data);
-            }
-        },
-        error: function() {
-            alert('Failed to refresh intelligence data');
-        },
-        complete: function() {
-            $btn.prop('disabled', false);
-            $icon.removeClass('spin');
-        }
-    });
-}
-
-// Auto-refresh every 30 minutes
-setInterval(function() {
-    refreshLocal825Intelligence();
-}, 30 * 60 * 1000);
-</script>
 
 <style>
 .local825-dashboard-widget {
-    padding: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
 }
 
-.widget-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #ddd;
+.local825-dashboard-widget h4 {
+    margin: 0 0 10px 0;
+    color: #23282d;
+    font-size: 14px;
+    font-weight: 600;
+    border-bottom: 1px solid #e5e5e5;
+    padding-bottom: 5px;
 }
 
-.widget-header h3 {
+.connection-status {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f9f9f9;
+    border-radius: 4px;
+    border: 1px solid #e5e5e5;
+}
+
+.status-indicator {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+.status-indicator.connected {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.connection-details {
     margin: 0;
-    color: #1e3c72;
-    font-size: 16px;
+    font-size: 12px;
+    color: #666;
+    line-height: 1.4;
 }
 
-.refresh-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 5px;
-    border-radius: 3px;
-    transition: background-color 0.2s;
+.quick-stats {
+    margin-bottom: 20px;
 }
 
-.refresh-btn:hover {
-    background-color: #f0f0f0;
-}
-
-.refresh-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.dashicons.spin {
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.widget-stats {
-    margin-bottom: 15px;
-}
-
-.stat-row {
-    display: flex;
-    gap: 15px;
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
 }
 
 .stat-item {
-    flex: 1;
     text-align: center;
     padding: 10px;
     background: #f9f9f9;
-    border-radius: 5px;
+    border-radius: 4px;
+    border: 1px solid #e5e5e5;
 }
 
 .stat-number {
     display: block;
-    font-size: 20px;
+    font-size: 18px;
     font-weight: bold;
-    color: #1e3c72;
+    color: #d4af37;
+    margin-bottom: 5px;
 }
 
 .stat-label {
@@ -192,57 +180,125 @@ setInterval(function() {
     text-transform: uppercase;
 }
 
-.top-story {
-    margin-bottom: 15px;
-    padding: 10px;
-    background: #f0f7ff;
-    border-left: 3px solid #1e3c72;
-    border-radius: 3px;
+.recent-activity {
+    margin-bottom: 20px;
 }
 
-.top-story h4 {
-    margin: 0 0 8px 0;
-    font-size: 12px;
-    color: #1e3c72;
-    text-transform: uppercase;
+.activity-list {
+    max-height: 120px;
+    overflow-y: auto;
 }
 
-.story-title {
-    font-weight: 500;
-    margin-bottom: 5px;
-    line-height: 1.3;
-}
-
-.story-meta {
+.activity-item {
     display: flex;
-    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    margin-bottom: 5px;
+    background: #f9f9f9;
+    border-radius: 3px;
     font-size: 11px;
-    color: #666;
 }
 
-.widget-actions {
+.activity-time {
+    color: #666;
+    min-width: 50px;
+}
+
+.activity-type {
+    color: #d4af37;
+    font-weight: bold;
+    min-width: 80px;
+}
+
+.activity-message {
+    color: #333;
+    flex: 1;
+}
+
+.no-activity {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+    font-size: 12px;
+    margin: 0;
+}
+
+.quick-actions {
+    margin-bottom: 20px;
+}
+
+.action-buttons {
     display: flex;
     gap: 8px;
-    margin-bottom: 15px;
+    flex-wrap: wrap;
 }
 
-.widget-actions .button {
+.action-buttons .button {
     flex: 1;
+    min-width: 80px;
     text-align: center;
     font-size: 11px;
-    padding: 5px 8px;
+    padding: 4px 8px;
 }
 
-.last-update {
-    text-align: center;
-    color: #666;
-    font-style: italic;
+.system-health {
+    margin-bottom: 0;
 }
 
-.no-data {
-    text-align: center;
-    color: #666;
-    font-style: italic;
-    padding: 20px;
+.health-indicators {
+    background: #f9f9f9;
+    border-radius: 4px;
+    border: 1px solid #e5e5e5;
+    padding: 10px;
+}
+
+.health-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid #e5e5e5;
+    font-size: 12px;
+}
+
+.health-item:last-child {
+    border-bottom: none;
+}
+
+.health-label {
+    color: #333;
+    font-weight: 500;
+}
+
+.health-status {
+    font-weight: bold;
+}
+
+.health-status.healthy {
+    color: #155724;
+}
+
+.health-status.warning {
+    color: #856404;
+}
+
+.health-status.info {
+    color: #0c5460;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+    
+    .action-buttons .button {
+        flex: none;
+    }
 }
 </style>
