@@ -61,18 +61,38 @@ def get_data():
         sample_data = {
             'articles': [
                 {
-                    'title': 'Sample Local 825 Intelligence Article',
-                    'source': 'Local 825 Intelligence System',
+                    'title': 'DataPilotPlus Local 825 Intelligence System Launch',
+                    'source': 'DataPilotPlus Intelligence',
                     'published': '2025-08-30',
-                    'summary': 'This is a sample article showing the data structure expected by the WordPress plugin.',
+                    'summary': 'DataPilotPlus has successfully launched the Local 825 Intelligence System, providing real-time monitoring and strategic insights for Local 825 Operating Engineers.',
                     'jurisdiction': 'Local 825 Specific',
                     'relevance_score': 95,
-                    'category': 'Intelligence',
-                    'url': 'https://local825.org'
+                    'category': 'System Launch',
+                    'url': 'https://datapilotplus.com'
+                },
+                {
+                    'title': 'Construction Industry Trends in New Jersey',
+                    'source': 'DataPilotPlus Market Analysis',
+                    'published': '2025-08-30',
+                    'summary': 'Analysis of current construction trends and opportunities in the New Jersey market for Local 825 members.',
+                    'jurisdiction': 'New Jersey',
+                    'relevance_score': 88,
+                    'category': 'Market Analysis',
+                    'url': 'https://datapilotplus.com'
+                },
+                {
+                    'title': 'New York Construction Projects Update',
+                    'source': 'DataPilotPlus Project Intelligence',
+                    'published': '2025-08-30',
+                    'summary': 'Latest updates on major construction projects in New York that may impact Local 825 members.',
+                    'jurisdiction': 'New York',
+                    'relevance_score': 82,
+                    'category': 'Project Updates',
+                    'url': 'https://datapilotplus.com'
                 }
             ],
             'metadata': {
-                'total_articles': 1,
+                'total_articles': 3,
                 'last_updated': '2025-08-30T10:00:00Z'
             }
         }
@@ -98,14 +118,24 @@ def get_companies():
                 'industry': 'Construction',
                 'status': 'active',
                 'last_updated': '2025-08-30',
-                'notes': 'Major construction company in Local 825 jurisdiction'
+                'notes': 'Major construction company in Local 825 jurisdiction - monitored by DataPilotPlus',
+                'source': 'DataPilotPlus Intelligence'
             },
             'turner': {
                 'name': 'Turner Construction',
                 'industry': 'Construction',
                 'status': 'active',
                 'last_updated': '2025-08-30',
-                'notes': 'Leading construction management company'
+                'notes': 'Leading construction management company - tracked for Local 825 opportunities',
+                'source': 'DataPilotPlus Intelligence'
+            },
+            'bechtel': {
+                'name': 'Bechtel Corporation',
+                'industry': 'Construction & Engineering',
+                'status': 'active',
+                'last_updated': '2025-08-30',
+                'notes': 'Global engineering and construction company - Local 825 jurisdiction monitoring',
+                'source': 'DataPilotPlus Intelligence'
             }
         }
         return jsonify(sample_companies)
