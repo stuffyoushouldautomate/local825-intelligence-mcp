@@ -1,3 +1,7 @@
+# Local 825 Intelligence MCP Server Configuration
+[build]
+builder = "NIXPACKS"
+
 [deploy]
 startCommand = "python app.py"
 healthcheckPath = "/health"
